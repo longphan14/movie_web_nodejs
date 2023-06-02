@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const customer = require('./models/customer');
 const Customer = require('./models/customer');
 const app = express();
 mongoose.set('strictQuery', false);
@@ -14,41 +15,59 @@ if (process.env.NODE_ENV !== 'production') {
 const PORT = process.env.PORT || 3000;
 const CONNECTION = process.env.CONNECTION;
 
-const json = {
-    "menu": {
-        "id": "file",
-        "value": "File",
-        "popup": {
-            "menuitem": [
-                { "value": "New", "onclick": "CreateNewDoc()" },
-                { "value": "Open", "onclick": "OpenDoc()" },
-                { "value": "Close", "onclick": "CloseDoc()" }
-            ]
-        }
-    }
-}
 
-const customer = new Customer({
-    name: 'Long',
-    industry: 'backend developers'
-});
+
+
 
 
 app.get('/', (req, res) => {
-    res.send(customer);
+    res.send("Welcome!");
 });
 
-app.get('/nextpage', (req, res) => {
-    res.send({"Data:": json.menu.popup.menuitem});
+app.get('/api/customers/:id/', async (req, res) => {
+    console.log({
+        requestParams: req.params,
+        requestQuery: req.query
+    });
+    try {
+        const { id: customerID } = req.params;
+        console.log(customerID);
+        const cus = await Customer.findById(customerID);
+        console.log(cus);
+        if (!cus) {
+            res.status(404).json({ error: "User not Found!" });
+        }
+        else {
+            res.json({ cus });
+        }
+    } catch (e){
+        res.status(500).json({ error: 'Error' });
+    }
+});
+
+app.get('/api/customers', async (req, res) => {
+    //console.log(await mongoose.connection.db.listCollections().toArray());
+    try {
+        const result = await Customer.find();
+        res.json({ "Data:": result });
+    } catch(error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/', (req, res) => {
     res.send('This is a post request');
 });
 
-app.post('/nextpage', (req, res) => {
+app.post('/api/customers', async (req, res) => {
     console.log(req.body);
-    res.send(req.body);
+    const customer = new Customer(req.body);
+    try {
+        await customer.save();
+        res.status(201).json({customer: customer});
+    } catch (e) {
+        res.status(400).json({error: e.message});
+    }
 })
 
 
